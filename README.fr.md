@@ -1,6 +1,6 @@
 # Connexion et CRUD avec PHP en utilisant PDO
 
-#### Si vous voulez lire ceci dans d'autres langues, cliquez ici
+#### Si vous voulez lire ceci dans d'autres langues, cliquez ici [English](https://github.com/DiegoFirmiano/database/blob/master/README.md) | [Português](https://github.com/DiegoFirmiano/database/blob/master/README.pt.md) 
 
 Ce code permet d'interagir avec une base de données à l'aide de PDO – PHP Data Object.
 
