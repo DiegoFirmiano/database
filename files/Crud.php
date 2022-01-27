@@ -20,7 +20,7 @@ class Crud
             $this->query = Connection::getConnection()->prepare($this->sql);
             $this->query->execute($values);
             return [
-                "Status" => true,
+                "status" => true,
                 "lastId" => Connection::getConnection()->lastInsertId()
             ];
         }catch(PDOException $error){
