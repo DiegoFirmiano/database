@@ -5,27 +5,6 @@ require_once "files/DatabaseException.php";
 require_once "files/Connection.php";
 require_once "files/Crud.php";
 
-//Uncomment the line below to database connection response
-//var_dump(Connection::getConnection());
-
-
-//Uncomment this line to see read results
-//var_dump($crud->read("names","*")->rowCount());
-//$crud->read("names","*");
-//foreach( $crud->read("names","*")->fetchAll() as $name){
-//    echo "ID : {$name["id"]} Name : {$name['name']} <br>";
-//}
-
-
-//Insert
-//var_dump($crud->create("names","name=?", ["Jane Costs"]));
-
-//Update record
-//var_dump($crud->update("names","name=? where id=?", ["JANE",4]));
-
-//Delete item
-//var_dump($crud->delete("names","where id=?", [6]));
-
 
 //create table names (
 //    id int(11) not null auto_increment primary key,
@@ -35,7 +14,8 @@ require_once "files/Crud.php";
 $crud = new Crud();
 $message = null;
 
-if (isset($_POST["name"])) {
+//Check form before insert data
+if (isset($_POST["insert"])) {
 
     //fast chek if name is greater than 3 characters
     if (strlen(trim($_POST["name"])) < 3) {
@@ -66,6 +46,54 @@ if (isset($_POST["name"])) {
     }
 }
 
+//Fetching results from database
+$read = $crud->read("names", "*","order by id desc");
+
+//Update data
+if (isset($_POST["update"])) {
+
+//ID
+    $id = filter_input(INPUT_POST, "id", FILTER_VALIDATE_INT);
+//Name
+    $name = filter_input(INPUT_POST, "name", FILTER_DEFAULT);
+
+//Check if name already exist
+    if ($crud->read("names", "name", "where name=? and id !=?", [$name, $id])->rowCount() === 0) {
+
+        //Check update has been done
+        if ($crud->update("names", "name=? where id=?", [$name, $id])) {
+            $message = "Name has been updated!<br>Refresh page to see last modifications";
+
+        } else {
+            $message = "Sorry, error to update name";
+        }
+    } else {
+        $message = "Name already exist";
+    }
+}
+
+//Deleting data
+if (isset($_POST["delete-name"])) {
+
+    //Name ID
+    $id = filter_input(INPUT_POST, 'delete-name', FILTER_VALIDATE_INT);
+
+    //Check if values is int
+    if ($id) {
+
+        //delete and check if data has been deleted
+        if ($crud->delete("names", "where id=?", [$id])) {
+            $message = "Name has been deleted!";
+            //Reload page to update automatically list
+            header("Refresh:0");
+        } else {
+            $message = "Sorry, fail to delete name";
+        }
+    } else {
+        $message = "Sorry, invalid ID sent";
+    }
+}
+
 ?>
 
 
@@ -75,93 +103,33 @@ if (isset($_POST["name"])) {
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- css -->
+    <link href="styles/app.css" rel="stylesheet">
+</head>
 
-    <title>CRUD - With PHP</title>
+<title>CRUD - With PHP</title>
 </head>
 <body>
-<style>
-    * {
-        box-sizing: border-box;
-        padding: 0;
-        border: 0;
-    }
-
-    .container {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        min-height: 100vh;
-        align-items: center;
-    }
-
-    @media screen and (max-width: 600px) {
-        .inner-container {
-            width: 100% !important;
-        }
-    }
-
-    .inner-container {
-        width: 600px;
-        padding: 1rem;
-    }
-
-    form {
-        width: 100%;
-        padding: .5rem;
-        background: #cccccc;
-        display: flex;
-        flex-direction: column;
-    }
-
-    form div, label {
-        width: 100%;
-        display: block;
-        padding: .5rem;
-    }
-
-    input {
-        padding: .7rem .3rem;
-        width: 100%;
-        border: 1px solid darkslateblue;
-    }
-
-    button {
-        background: darkslateblue;
-        color: white;
-        border: 0;
-        padding: .5rem;
-        cursor: pointer;
-    }
-
-    ul {
-        list-style: none;
-        display: block;
-        width: 100%;
-    }
-
-    ul li {
-        display: flex;
-        justify-content: space-between;
-        padding: .5rem;
-        background: #cccccc;
-        color: darkslateblue;
-        margin: 2px 0;
-        align-items: center;
-    }
-
-</style>
 
 <div class="container">
     <div class="inner-container">
+        <!-- Display errors messages here -->
+        <div class="messages">
+            <?php echo $message ?>
+        </div>
+
+        <hr style="display: block;" />
+
+        <div class="title-box">
+            <h3>Create</h3>
+        </div>
+
         <!-- Insert names form -->
-        <form method="post" enctype="multipart/form-data">
-            <!-- Display errors messages here -->
-            <div>
-                <?php echo $message ?>
-            </div>
+        <form class="insert-form" method="post" enctype="multipart/form-data">
             <div class="form-group">
-                <label>Insert name</label>
+                <label>Enter your name</label>
                 <input type="text" name="name" placeholder="Ex. John Doe" required>
+                <input type="hidden" name="insert">
             </div>
             <div>
                 <button type="submit">Submit</button>
@@ -169,14 +137,45 @@ if (isset($_POST["name"])) {
         </form>
 
         <hr/>
-        <h3>Names</h3>
+
+        <div class="title-box">
+            <h3>Read</h3>
+        </div>
 
         <!-- List names -->
         <ul>
-            <li> Name 1
-                <button>Delete</button>
-            </li>
+            <?php
+            foreach ($read->fetchAll() as $names) {
+                echo "<li>{$names["name"]} <div style='display: flex; justify-content: space-between; align-items: center;'><button class='collapse-btn' data-target='collapse-box-{$names["id"]}' style='margin-right: 2px;'>edit</button> <form method='post'>  <input type='hidden' name='delete-name' value='{$names["id"]}'><button type='submit' title='Delete'>Delete</button> </form></div></li>";
+                echo "
+            <div id='collapse-box-{$names["id"]}' class='collapse-box'>
+                    <div class='title-box'>
+                        <h3>Update</h3>
+                    </div>
+                <form class='insert-form' method='post' enctype='multipart/form-data'>
+                    <div class='form-group'>
+                        <label>Edit </label>
+                        <input type='text' name='name' value='{$names["name"]}' required>
+                        <input type='hidden' name='id' value='{$names["id"]}'>
+                        <input type='hidden' name='update'>
+                    </div>
+                    <div>
+                        <button type='submit'>Update</button>
+                    </div>
+                </form>
+            </div>";
+            }
+            ?>
         </ul>
+
+
+        <!-- Click event for display edition form -->
+        <script type="text/javascript">
+            document.querySelectorAll('.collapse-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                document.getElementById(btn.dataset.target).classList.toggle('open');
+            }));
+        </script>
+
     </div>
 </div>
 </body>
